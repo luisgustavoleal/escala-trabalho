@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Escala Rotativa com Datas</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #dddddd; padding: 8px; text-align: center; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+<h2>Gerador de Escala Rotativa com Datas</h2>
+
+<form id="escalaForm">
+    <label for="inicioData">Data de Início:</label>
+    <input type="date" id="inicioData" required><br><br>
+
+    <label for="fimData">Data de Término:</label>
+    <input type="date" id="fimData" required><br><br>
+
+    <label for="nomes">Lista de Pessoas (um nome por linha):</label><br>
+    <textarea id="nomes" rows="7" cols="30" placeholder="Nome 1&#10;Nome 2&#10;Nome 3"></textarea><br><br>
+
+    <label for="ferias">Calendário de Férias (formato: Nome, início, fim. Ex: Nome 1, 01/09/2024, 15/09/2024):</label><br>
+    <textarea id="ferias" rows="5" cols="50"></textarea><br><br>
+
+    <label for="plantao">Calendário de Plantão (formato: Nome, início, fim. Ex: Nome 1, 01/09/2024, 15/09/2024):</label><br>
+    <textarea id="plantao" rows="5" cols="50"></textarea><br><br>
+
+    <button type="button" onclick="gerarEscala()">Gerar Escala</button>
+</form>
+
+<div id="resultado"></div>
+
+<script>
+    function gerarEscala() {
+        // Captura as datas de início e término
+        const inicioData = new Date(document.getElementById('inicioData').value);
+        const fimData = new Date(document.getElementById('fimData').value);
+        
+        if (inicioData > fimData) {
+            alert("A data de início deve ser anterior à data de término.");
+            return;
+        }
+
+        // Captura os dados dos campos
+        const nomes = document.getElementById('nomes').value.trim().split('\n');
+        const feriasInput = document.getElementById('ferias').value.trim().split('\n');
+        const plantaoInput = document.getElementById('plantao').value.trim().split('\n');
+
+        // Processa as férias e plantão em objetos
+        const ferias = feriasInput.map(item => {
+            const [nome, inicio, fim] = item.split(',').map(str => str.trim());
+            return { nome, inicio: new Date(inicio), fim: new Date(fim) };
+        });
+
+        const plantao = plantaoInput.map(item => {
+            const [nome, inicio, fim] = item.split(',').map(str => str.trim());
+            return { nome, inicio: new Date(inicio), fim: new Date(fim) };
+        });
+
+        // Cria a estrutura da tabela de escala
+        let tabelaHTML = '<table><tr><th>Data</th><th>Turno 1 (08h-17h)</th><th>Turno 2 (14h-19h)</th></tr>';
+
+        // Itera sobre as semanas e nomes para construir a escala
+        let dataAtual = new Date(inicioData);
+        let indiceNome = 0;
+
+        while (dataAtual <= fimData) {
+            let turno1 = nomes[indiceNome % nomes.length];
+            let turno2 = nomes[(indiceNome + 1) % nomes.length];
+
+            // Verifica disponibilidade de turno1
+            let indisponivelTurno1 = ferias.some(f => f.nome === turno1 && dataAtual >= f.inicio && dataAtual <= f.fim) ||
+                                     plantao.some(p => p.nome === turno1 && dataAtual >= p.inicio && dataAtual <= p.fim);
+            if (indisponivelTurno1) {
+                turno1 = 'Substituto';
+            }
+
+            // Verifica disponibilidade de turno2
+            let indisponivelTurno2 = ferias.some(f => f.nome === turno2 && dataAtual >= f.inicio && dataAtual <= f.fim) ||
+                                     plantao.some(p => p.nome === turno2 && dataAtual >= p.inicio && dataAtual <= p.fim);
+            if (indisponivelTurno2) {
+                turno2 = 'Substituto';
+            }
+
+            // Adiciona linha na tabela com data e turnos
+            tabelaHTML += `<tr><td>${dataAtual.toLocaleDateString()}</td><td>${turno1}</td><td>${turno2}</td></tr>`;
+
+            // Avança para a próxima semana e índice de nomes
+            dataAtual.setDate(dataAtual.getDate() + 7); // Avança 7 dias
+            indiceNome += 2;
+        }
+
+        tabelaHTML += '</table>';
+
+        // Exibe o resultado
+        document.getElementById('resultado').innerHTML = tabelaHTML;
+    }
+</script>
+
+</body>
+</html>
